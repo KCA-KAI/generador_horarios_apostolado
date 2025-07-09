@@ -138,9 +138,8 @@ with tabs[2]:
             franjas_por_dia = len(horas_por_dia)
             for d in range(len(dias)):
                 franjas_dia = [d * franjas_por_dia + h for h in range(franjas_por_dia)]
-
-        clases_en_dia = [variables[(i, f)] for i in indices_andrea for f in franjas_dia]
-        model.Add(sum(clases_en_dia) == 1)
+                clases_en_dia = [variables[(i, f)] for i in indices_andrea for f in franjas_dia]
+                model.Add(sum(clases_en_dia) == 1)
 
         # Asegurar al menos una clase de Matemáticas y una de Lengua cada día
         franjas_por_dia = len(horas_por_dia)
