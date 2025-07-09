@@ -90,29 +90,6 @@ with tabs[2]:
                 indices = df[df["Curso"] == curso].index
                 model.Add(sum(variables[(i, f)] for i in indices) <= 1)
 
-        # 🔒 Limitar a 2 clases por día para una misma asignatura en cada curso
-        franjas_por_dia = len(horas_por_dia)  # 👈 Aseguramos que está definido
-        for curso in df["Curso"].unique():
-            for asignatura in df["Asignatura"].unique():
-                # Filtrar las filas que coinciden con ese curso y asignatura
-                indices = df[
-                    (df["Curso"] == curso) &
-                    (df["Asignatura"] == asignatura)
-                ].index
-
-                if indices.empty:
-                    continue
-
-                for d in range(len(dias)):
-                    # Obtener franjas del día d
-                    franjas_dia = [d * franjas_por_dia + h for h in range(franjas_por_dia)]
-
-                    # Todas las clases de esa asignatura y curso en ese día
-                    clases_dia = [variables[(i, f)] for i in indices for f in franjas_dia]
-            
-                    # 🔐 Restricción: máximo 2 franjas por día
-                    model.Add(sum(clases_dia) <= 2)
-
         # 🔒 Fernando debe tener libre si hay Inglés en ciertos cursos
         cursos_con_ingles = ["1ºA", "1ºB", "1ºC", "3ºA", "3ºB", "3ºC", "5ºA", "5ºB", "5ºC"]
 
