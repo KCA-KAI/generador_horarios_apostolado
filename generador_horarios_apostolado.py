@@ -166,33 +166,20 @@ with tabs[2]:
                 if clases_lengua:
                     model.Add(sum(clases_lengua) >= 1)
 
-        # 📘 Preferencia: Matemáticas y Lengua en primeras franjas del día
-        franjas_por_dia = len(horas_por_dia)
-        primeras_franjas = 3  # Las tres primeras franjas de cada día
+        # 📘 Preferencia: Matemáticas y Lengua en las primeras 3 franjas del día
+        primeras_franjas = 3
+        franjas_preferidas = [
+            d * franjas_por_dia + h
+            for d in range(len(dias))
+            for h in range(primeras_franjas)
+        ]
 
-        for curso in df["Curso"].unique():
-            for asignatura in ["matemáticas", "lengua"]:
-                indices = df[
-                    (df["Curso"] == curso) &
-                    (df["Asignatura"].str.lower().str.contains(asignatura))
-                ].index
-
-                if not indices.empty:
-                    # Calcular franjas preferidas (primeras 3 de cada día)
-                    franjas_preferidas = [
-                        d * franjas_por_dia + h
-                        for d in range(len(dias))
-                        for h in range(primeras_franjas)
-                    ]
-
-                    total_clases = int(df.loc[indices[0], "Horas por semana"])
-
-                    if total_clases <= len(franjas_preferidas):
-                        # Si caben todas las clases en las franjas preferidas, forzamos que estén ahí
-                        for i in indices:
-                            for f in range(franjas_totales):
-                                if f not in franjas_preferidas:
-                                    model.Add(variables[(i, f)] == 0)
+        for i, fila in df.iterrows():
+            if fila["Asignatura"].lower() in ["matemáticas", "lengua"]:
+                # Preferimos que estas clases estén en las franjas preferidas
+                for f in range(franjas_totales):
+                    if f not in franjas_preferidas:
+                        model.AddHint(variables[(i, f)], 0)
 
         # 🎶 Toni debe impartir Coro (Secundaria) solo de 10:00 a 11:00
         franja_valida = "10:00-11:00"
