@@ -166,21 +166,6 @@ with tabs[2]:
                 if clases_lengua:
                     model.Add(sum(clases_lengua) >= 1)
 
-        # 📘 Preferencia: Matemáticas y Lengua en las primeras 3 franjas del día
-        primeras_franjas = 3
-        franjas_preferidas = [
-            d * franjas_por_dia + h
-            for d in range(len(dias))
-            for h in range(primeras_franjas)
-        ]
-
-        for i, fila in df.iterrows():
-            if fila["Asignatura"].lower() in ["matemáticas", "lengua"]:
-                # Preferimos que estas clases estén en las franjas preferidas
-                for f in range(franjas_totales):
-                    if f not in franjas_preferidas:
-                        model.AddHint(variables[(i, f)], 0)
-
         # 🎶 Toni debe impartir Coro (Secundaria) solo de 10:00 a 11:00
         franja_valida = "10:00-11:00"
         indice_franja_valida = horas_por_dia.index(franja_valida)
