@@ -91,6 +91,7 @@ with tabs[2]:
                 model.Add(sum(variables[(i, f)] for i in indices) <= 1)
 
         # 🔒 Limitar a 2 clases por día para una misma asignatura en cada curso
+        franjas_por_dia = len(horas_por_dia)  # 👈 Aseguramos que está definido
         for curso in df["Curso"].unique():
             for asignatura in df["Asignatura"].unique():
                 # Filtrar las filas que coinciden con ese curso y asignatura
