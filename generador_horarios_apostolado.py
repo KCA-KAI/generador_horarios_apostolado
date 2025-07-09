@@ -138,8 +138,53 @@ with tabs[2]:
             franjas_por_dia = len(horas_por_dia)
             for d in range(len(dias)):
                 franjas_dia = [d * franjas_por_dia + h for h in range(franjas_por_dia)]
-                clases_en_dia = [variables[(i, f)] for i in indices_andrea for f in franjas_dia]
-                model.Add(sum(clases_en_dia) == 1)
+
+        clases_en_dia = [variables[(i, f)] for i in indices_andrea for f in franjas_dia]
+        model.Add(sum(clases_en_dia) == 1)
+
+        # Asegurar al menos una clase de Matemáticas y una de Lengua cada día
+        franjas_por_dia = len(horas_por_dia)
+
+        for d in range(len(dias)):
+            franjas_dia = [d * franjas_por_dia + h for h in range(franjas_por_dia)]
+
+            # Matemáticas
+            indices_mates = df[df["Asignatura"].str.lower().str.contains("matemáticas")].index
+            clases_mates_en_dia = [variables[(i, f)] for i in indices_mates for f in franjas_dia]
+            model.Add(sum(clases_mates_en_dia) >= 1)
+
+            # Lengua
+            indices_lengua = df[df["Asignatura"].str.lower().str.contains("lengua")].index
+            clases_lengua_en_dia = [variables[(i, f)] for i in indices_lengua for f in franjas_dia]
+            model.Add(sum(clases_lengua_en_dia) >= 1)
+
+        # 📘 Preferencia: Matemáticas y Lengua en primeras franjas del día
+        franjas_por_dia = len(horas_por_dia)
+        primeras_franjas = 3  # Las tres primeras franjas de cada día
+
+        for curso in df["Curso"].unique():
+            for asignatura in ["matemáticas", "lengua"]:
+                indices = df[
+                    (df["Curso"] == curso) &
+                    (df["Asignatura"].str.lower().str.contains(asignatura))
+                ].index
+
+                if not indices.empty:
+                    # Calcular franjas preferidas (primeras 3 de cada día)
+                    franjas_preferidas = [
+                        d * franjas_por_dia + h
+                        for d in range(len(dias))
+                        for h in range(primeras_franjas)
+                    ]
+
+                    total_clases = int(df.loc[indices[0], "Horas por semana"])
+
+                    if total_clases <= len(franjas_preferidas):
+                        # Si caben todas las clases en las franjas preferidas, forzamos que estén ahí
+                        for i in indices:
+                            for f in range(franjas_totales):
+                                if f not in franjas_preferidas:
+                                    model.Add(variables[(i, f)] == 0)
 
         # 🎶 Toni debe impartir Coro (Secundaria) solo de 10:00 a 11:00
         franja_valida = "10:00-11:00"
