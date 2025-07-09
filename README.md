@@ -1,2 +1,0 @@
-# generador_horarios_apostolado
-Generador horarios Apostolado

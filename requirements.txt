@@ -1,0 +1,9 @@
+# 📦 DEPENDENCIAS DEL GENERADOR DE HORARIOS ESCOLARES
+# 🎯 Para instalar: pip install -r requirements.txt
+
+streamlit
+pandas
+openpyxl
+ortools
+matplotlib
+xlsxwriter
