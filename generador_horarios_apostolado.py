@@ -281,33 +281,6 @@ with tabs[2]:
                 # ⚠️ Máximo 2 clases por día para esa asignatura en ese curso
                 model.Add(sum(clases_dia) <= 2)
 
-        # 🎯 Preferencia: Matemáticas y Lengua en primeras franjas del día (no obligatorio)
-        primeras_franjas = 3  # Las 3 primeras franjas de cada día
-        franjas_por_dia = len(horas_por_dia)
-
-        for curso in df["Curso"].unique():
-            for asignatura in ["matemáticas", "lengua"]:
-                indices = df[
-                    (df["Curso"] == curso) &
-                    (df["Asignatura"].str.lower().str.contains(asignatura))
-                ].index
-
-                if not indices.empty:
-                    franjas_preferidas = [
-                        d * franjas_por_dia + h
-                        for d in range(len(dias))
-                        for h in range(primeras_franjas)
-                    ]
-
-                    # En lugar de forzar las franjas, solo evitamos más de 1 clase fuera de la franja preferida
-                    clases_fuera = [
-                        variables[(i, f)] for i in indices
-                        for f in range(franjas_totales) if f not in franjas_preferidas
-                    ]
-
-                    # Permitimos 1 clase fuera como máximo (flexible)
-                    model.Add(sum(clases_fuera) <= 1)
-
         # RESOLVER
         # 👉 Permitir a la Jefa de Estudios regenerar el horario
         if st.button("🔄 Generar otro horario (versión alternativa)"):
