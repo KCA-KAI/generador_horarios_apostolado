@@ -301,6 +301,30 @@ with tabs[2]:
         # Añadir restricción: al menos uno de los dos debe dar clase en esa franja
         model.Add(sum(variables[(i, franja_objetivo)] for i in indices_objetivo) >= 1)
 
+        # 🔒 RESTRICCIÓN: Solo una clase diaria por asignatura y curso
+        franjas_por_dia = len(horas_por_dia)
+
+        for curso in df["Curso"].unique():
+            for asignatura in df["Asignatura"].unique():
+                # Filtra combinaciones curso + asignatura
+                indices = df[
+                    (df["Curso"] == curso) &
+                    (df["Asignatura"] == asignatura)
+                ].index
+
+                if indices.empty:
+                    continue
+
+                for d in range(len(dias)):
+                    # Calcula las franjas de ese día
+                    franjas_dia = [d * franjas_por_dia + h for h in range(franjas_por_dia)]
+
+                    # Agrupa las clases de esa combinación curso+asignatura ese día
+                    clases_en_dia = [variables[(i, f)] for i in indices for f in franjas_dia]
+
+                    # Impide que haya más de 1 clase al día
+                    model.Add(sum(clases_en_dia) <= 1)
+
         # RESOLVER
         # 👉 Permitir a la Jefa de Estudios regenerar el horario
         if st.button("🔄 Generar otro horario (versión alternativa)"):
