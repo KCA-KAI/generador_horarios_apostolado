@@ -142,22 +142,6 @@ with tabs[2]:
         clases_en_dia = [variables[(i, f)] for i in indices_andrea for f in franjas_dia]
         model.Add(sum(clases_en_dia) == 1)
 
-        # Asegurar al menos una clase de Matemáticas y una de Lengua cada día
-        franjas_por_dia = len(horas_por_dia)
-
-        for d in range(len(dias)):
-            franjas_dia = [d * franjas_por_dia + h for h in range(franjas_por_dia)]
-
-            # Matemáticas
-            indices_mates = df[df["Asignatura"].str.lower().str.contains("matemáticas")].index
-            clases_mates_en_dia = [variables[(i, f)] for i in indices_mates for f in franjas_dia]
-            model.Add(sum(clases_mates_en_dia) >= 1)
-
-            # Lengua
-            indices_lengua = df[df["Asignatura"].str.lower().str.contains("lengua")].index
-            clases_lengua_en_dia = [variables[(i, f)] for i in indices_lengua for f in franjas_dia]
-            model.Add(sum(clases_lengua_en_dia) >= 1)
-
         # 🎶 Toni debe impartir Coro (Secundaria) solo de 10:00 a 11:00
         franja_valida = "10:00-11:00"
         indice_franja_valida = horas_por_dia.index(franja_valida)
