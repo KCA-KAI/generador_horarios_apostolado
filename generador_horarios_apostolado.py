@@ -89,8 +89,8 @@ with tabs[1]:
             st.metric("📚 Asignaturas únicas", df['Asignatura'].nunique())
             st.metric("⏰ Franjas totales necesarias", int(df['Franjas_necesarias'].sum()))
         
-        # Análisis de capacidad corregido
-        franjas_por_curso = 5 * 10  # 5 días x 10 franjas de 30min
+        # Análisis de capacidad corregido (descontando recreo)
+        franjas_por_curso = 5 * 9  # 5 días x 9 franjas útiles (10 - 1 recreo)
         total_cursos = df["Curso"].nunique()
         capacidad_total = franjas_por_curso * total_cursos
         franjas_necesarias = df['Franjas_necesarias'].sum()
@@ -99,12 +99,14 @@ with tabs[1]:
         col1, col2, col3 = st.columns(3)
         
         with col1:
-            st.metric("📅 Franjas por curso", franjas_por_curso)
+            st.metric("📅 Franjas útiles por curso", franjas_por_curso)
         with col2:
             st.metric("🏫 Capacidad total", capacidad_total)
         with col3:
             porcentaje_uso = (franjas_necesarias / capacidad_total) * 100
             st.metric("📈 % de ocupación", f"{porcentaje_uso:.1f}%")
+        
+        st.info("🔔 **Recreo descontado**: 12:00-12:30 diariamente (5 franjas menos)")
         
         # Análisis por profesor
         st.subheader("👨‍🏫 Carga por Profesor")
@@ -217,11 +219,16 @@ with tabs[3]:
         ]
         franjas_totales = len(dias) * len(franjas_por_dia)
         
+        # 🔔 RECREO: 12:00-12:30 todos los días (franja 6 de cada día)
+        franja_recreo = 6  # Posición de "12:00-12:30" en la lista
+        franjas_recreo = [d * len(franjas_por_dia) + franja_recreo for d in range(len(dias))]
+        
         # Mostrar configuración actual
         flexibilidad = st.session_state.get("flexibilidad", "Moderado")
         restricciones = st.session_state.get("restricciones", {})
         
         st.info(f"📋 **Nivel de flexibilidad**: {flexibilidad}")
+        st.info(f"🔔 **Recreo programado**: 12:00-12:30 (lunes a viernes)")
         
         restricciones_activas = sum(restricciones.values()) if restricciones else 0
         st.info(f"🔧 **Restricciones activas**: {restricciones_activas} de 6")
@@ -246,6 +253,11 @@ with tabs[3]:
                         variables[(i, f)] = model.NewBoolVar(f"clase_{i}_franja_{f}")
                 
                 # RESTRICCIONES BÁSICAS (siempre activas)
+                
+                # 🔔 RECREO: Prohibir clases durante 12:00-12:30 todos los días
+                for i in range(len(df)):
+                    for franja in franjas_recreo:
+                        model.Add(variables[(i, franja)] == 0)
                 
                 # Cada clase debe tener exactamente sus franjas necesarias
                 for i, fila in df.iterrows():
@@ -390,7 +402,7 @@ with tabs[3]:
                 # Resolver
                 status = solver.Solve(model)
                 
-                st.info(f"🔧 **Restricciones aplicadas**: {restricciones_aplicadas}")
+                st.info(f"🔧 **Restricciones aplicadas**: {restricciones_aplicadas} + Recreo obligatorio")
                 
                 if status in [cp_model.FEASIBLE, cp_model.OPTIMAL]:
                     st.success("✅ ¡Horario generado con éxito!")
@@ -455,12 +467,16 @@ with tabs[4]:
                 dia = dias[f // len(franjas_por_dia)]
                 franja = franjas_por_dia[f % len(franjas_por_dia)]
                 
-                clases = []
-                for i, fila in df.iterrows():
-                    if fila["Curso"] == curso_seleccionado and solver.BooleanValue(variables[(i, f)]):
-                        clases.append(f"{fila['Asignatura']} ({fila['Profesor']})")
-                
-                tabla.at[franja, dia] = "\n".join(clases) if clases else ""
+                # Mostrar RECREO en la franja correspondiente
+                if f in franjas_recreo:
+                    tabla.at[franja, dia] = "🔔 RECREO"
+                else:
+                    clases = []
+                    for i, fila in df.iterrows():
+                        if fila["Curso"] == curso_seleccionado and solver.BooleanValue(variables[(i, f)]):
+                            clases.append(f"{fila['Asignatura']} ({fila['Profesor']})")
+                    
+                    tabla.at[franja, dia] = "\n".join(clases) if clases else ""
             
             st.subheader(f"🗓 Horario para {curso_seleccionado}")
             st.dataframe(tabla, use_container_width=True, height=500)
@@ -475,12 +491,16 @@ with tabs[4]:
                 dia = dias[f // len(franjas_por_dia)]
                 franja = franjas_por_dia[f % len(franjas_por_dia)]
                 
-                clases = []
-                for i, fila in df.iterrows():
-                    if fila["Profesor"] == profe_seleccionado and solver.BooleanValue(variables[(i, f)]):
-                        clases.append(f"{fila['Asignatura']} ({fila['Curso']})")
-                
-                tabla.at[franja, dia] = "\n".join(clases) if clases else ""
+                # Mostrar RECREO en la franja correspondiente
+                if f in franjas_recreo:
+                    tabla.at[franja, dia] = "🔔 RECREO"
+                else:
+                    clases = []
+                    for i, fila in df.iterrows():
+                        if fila["Profesor"] == profe_seleccionado and solver.BooleanValue(variables[(i, f)]):
+                            clases.append(f"{fila['Asignatura']} ({fila['Curso']})")
+                    
+                    tabla.at[franja, dia] = "\n".join(clases) if clases else ""
             
             st.subheader(f"🗓 Horario para {profe_seleccionado}")
             st.dataframe(tabla, use_container_width=True, height=500)
@@ -511,12 +531,16 @@ with tabs[5]:
                     dia = dias[f // len(franjas_por_dia)]
                     franja = franjas_por_dia[f % len(franjas_por_dia)]
                     
-                    clases = []
-                    for i, fila in df.iterrows():
-                        if fila["Curso"] == curso and solver.BooleanValue(variables[(i, f)]):
-                            clases.append(f"{fila['Asignatura']} ({fila['Profesor']})")
-                    
-                    tabla.at[franja, dia] = " | ".join(clases) if clases else ""
+                    # Mostrar RECREO en la exportación
+                    if f in [d * len(franjas_por_dia) + 6 for d in range(len(dias))]:
+                        tabla.at[franja, dia] = "🔔 RECREO"
+                    else:
+                        clases = []
+                        for i, fila in df.iterrows():
+                            if fila["Curso"] == curso and solver.BooleanValue(variables[(i, f)]):
+                                clases.append(f"{fila['Asignatura']} ({fila['Profesor']})")
+                        
+                        tabla.at[franja, dia] = " | ".join(clases) if clases else ""
                 
                 tabla.index.name = "Franja"
                 tabla.to_excel(writer, sheet_name=f"Curso_{curso.replace('º', 'o')}")
@@ -529,12 +553,16 @@ with tabs[5]:
                     dia = dias[f // len(franjas_por_dia)]
                     franja = franjas_por_dia[f % len(franjas_por_dia)]
                     
-                    clases = []
-                    for i, fila in df.iterrows():
-                        if fila["Profesor"] == profesor and solver.BooleanValue(variables[(i, f)]):
-                            clases.append(f"{fila['Asignatura']} ({fila['Curso']})")
-                    
-                    tabla.at[franja, dia] = " | ".join(clases) if clases else ""
+                    # Mostrar RECREO en la exportación para profesores
+                    if f in [d * len(franjas_por_dia) + 6 for d in range(len(dias))]:
+                        tabla.at[franja, dia] = "🔔 RECREO"
+                    else:
+                        clases = []
+                        for i, fila in df.iterrows():
+                            if fila["Profesor"] == profesor and solver.BooleanValue(variables[(i, f)]):
+                                clases.append(f"{fila['Asignatura']} ({fila['Curso']})")
+                        
+                        tabla.at[franja, dia] = " | ".join(clases) if clases else ""
                 
                 tabla.index.name = "Franja"
                 nombre_hoja = profesor.replace(" ", "_")[:25]
