@@ -89,21 +89,26 @@ with tabs[1]:
             st.metric("⏰ Franjas totales necesarias", int(df['Franjas_necesarias'].sum()))
         
         # 🔧 NUEVA FUNCIONALIDAD: Análisis de viabilidad
-        franjas_disponibles = 5 * 10  # 5 días x 10 franjas de 30min por día
+        franjas_disponibles_por_curso = 5 * 10  # 5 días x 10 franjas de 30min por curso
+        franjas_disponibles_total = franjas_disponibles_por_curso * df["Curso"].nunique()
         franjas_necesarias = df['Franjas_necesarias'].sum()
         
         st.subheader("📊 Análisis de Capacidad")
         col1, col2, col3 = st.columns(3)
         
         with col1:
-            st.metric("📅 Franjas disponibles", franjas_disponibles)
+            st.metric("📅 Franjas por curso", franjas_disponibles_por_curso)
         with col2:
             st.metric("📋 Franjas necesarias", franjas_necesarias)
         with col3:
-            porcentaje_uso = (franjas_necesarias / franjas_disponibles) * 100
-            st.metric("📈 % de ocupación", f"{porcentaje_uso:.1f}%")
+            porcentaje_uso = (franjas_necesarias / franjas_disponibles_total) * 100
+            st.metric("📈 % de ocupación real", f"{porcentaje_uso:.1f}%")
         
-        if franjas_necesarias > franjas_disponibles:
+        # Mostrar análisis detallado
+        st.info(f"🎓 **{df['Curso'].nunique()} cursos** pueden tener clases simultáneamente")
+        st.info(f"🏫 **Capacidad total**: {franjas_disponibles_total} franjas ({franjas_disponibles_total/2:.0f} horas)")
+        
+        if franjas_necesarias > franjas_disponibles_total:
             st.error("⚠️ No hay suficientes franjas horarias para todas las clases")
         elif porcentaje_uso > 80:
             st.warning("⚠️ El horario estará muy saturado (>80% ocupación)")
@@ -126,6 +131,10 @@ with tabs[2]:
             "11:30-12:00", "12:00-12:30", "12:30-13:00", "13:00-13:30", "13:30-14:00"
         ]
         franjas_totales = len(dias) * len(franjas_por_dia)
+        
+        # 🔧 CÁLCULO CORREGIDO: Considerar que múltiples cursos pueden tener clase simultáneamente
+        cursos_unicos = df["Curso"].nunique()
+        franjas_reales_disponibles = franjas_totales * cursos_unicos  # Cada curso puede usar todas las franjas
         
         # Mostrar configuración
         st.subheader("⚙️ Configuración del Horario")
