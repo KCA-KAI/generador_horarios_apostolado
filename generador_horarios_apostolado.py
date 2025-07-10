@@ -257,17 +257,15 @@ with tabs[2]:
         # Añadir restricción: al menos uno de los dos debe dar clase en esa franja
         model.Add(sum(variables[(i, franja_objetivo)] for i in indices_objetivo) >= 1)
 
-        # 🔒 RESTRICCIÓN REVISADA: Máximo 1 clase diaria por asignatura en cada curso
+        # 🔁 RESTRICCIÓN FLEXIBLE: Máximo 2 clases diarias por asignatura en cada curso
         franjas_por_dia = len(horas_por_dia)
 
-        # Creamos un conjunto único de combinaciones curso + asignatura
         combinaciones = df[["Curso", "Asignatura"]].drop_duplicates()
 
         for _, fila in combinaciones.iterrows():
             curso = fila["Curso"]
             asignatura = fila["Asignatura"]
 
-            # Obtenemos todos los índices (filas) que tienen esa combinación
             indices = df[
                 (df["Curso"] == curso) &
                 (df["Asignatura"] == asignatura)
@@ -280,8 +278,35 @@ with tabs[2]:
                 franjas_dia = [d * franjas_por_dia + h for h in range(franjas_por_dia)]
                 clases_dia = [variables[(i, f)] for i in indices for f in franjas_dia]
 
-                # ⚠️ Solo una clase por día para esa asignatura en ese curso
-                model.Add(sum(clases_dia) <= 1)
+                # ⚠️ Máximo 2 clases por día para esa asignatura en ese curso
+                model.Add(sum(clases_dia) <= 2)
+
+        # 🎯 Preferencia: Matemáticas y Lengua en primeras franjas del día (no obligatorio)
+        primeras_franjas = 3  # Las 3 primeras franjas de cada día
+        franjas_por_dia = len(horas_por_dia)
+
+        for curso in df["Curso"].unique():
+            for asignatura in ["matemáticas", "lengua"]:
+                indices = df[
+                    (df["Curso"] == curso) &
+                    (df["Asignatura"].str.lower().str.contains(asignatura))
+                ].index
+
+                if not indices.empty:
+                    franjas_preferidas = [
+                        d * franjas_por_dia + h
+                        for d in range(len(dias))
+                        for h in range(primeras_franjas)
+                    ]
+
+                    # En lugar de forzar las franjas, solo evitamos más de 1 clase fuera de la franja preferida
+                    clases_fuera = [
+                        variables[(i, f)] for i in indices
+                        for f in range(franjas_totales) if f not in franjas_preferidas
+                    ]
+
+                    # Permitimos 1 clase fuera como máximo (flexible)
+                    model.Add(sum(clases_fuera) <= 1)
 
         # RESOLVER
         # 👉 Permitir a la Jefa de Estudios regenerar el horario
